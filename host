@@ -2,18 +2,18 @@
 #用到多少主机就写多少，host_name用来设置主机名，必须要设置，不要重复
 #部署单机版的k8s集群时记得把多余的master删掉或注释掉
 [all-server]
-$k8s-master01  host_name=k8s-master01
-$k8s-master02  host_name=k8s-master02
-$k8s-master03  host_name=k8s-master03
-$k8s-node01    host_name=k8s-node01
-$k8s-node02    host_name=k8s-node02
-$k8s-node03    host_name=k8s-node03
-$database01    host_name=database01
-$database02    host_name=database02
-$database03    host_name=database03
-$harbor-server host_name=harbor-server
-$web-server    host_name=web-server
-$live-server   host_name=live-server
+192.168.2.60  host_name=k8s-master01
+192.168.2.65  host_name=k8s-master02
+192.168.2.67  host_name=k8s-master03
+192.168.0.205    host_name=k8s-node01
+192.168.0.206    host_name=k8s-node02
+192.168.0.207    host_name=k8s-node03
+192.168.2.61    host_name=database01
+192.168.2.62    host_name=database02
+192.168.2.63    host_name=database03
+192.168.2.66 host_name=harbor-server
+192.168.2.64    host_name=web-server
+192.168.0.200   host_name=live-server
 
 #这部分需要说明是谁要做什么操作？~~~~~~~~~~~
 #磁盘分区、格式化、挂载等操作，默认挂载到/data目录，如果以挂载好，请忽略此配置项
@@ -34,11 +34,11 @@ lv_name=data-lv
 
 #DNS部署
 [dns-server]
-$web-server
+192.168.2.64
 
 #ansible的安装也是在web-server中进行；~~~~~~~~~~~
 [ansible-server]
-$web-server
+192.168.2.64
 
 #k8s部署
 #注意set_ha_type的值
@@ -46,16 +46,16 @@ $web-server
 #私有化部署高可用的k8s时，set_ha_type设置为: 1
 #公有云部署高可用的k8s时，set_ha_type设置为: 2
 [k8s-server]
-$k8s-master01 k8s_role=master1 ha_priority=150 set_ha_type=1
-$k8s-master02 k8s_role=master2 ha_priority=100 set_ha_type=1
-$k8s-master03 k8s_role=master3 ha_priority=50 set_ha_type=1
-$k8s-node01 k8s_role=node
-$k8s-node02 k8s_role=node
-$k8s-node03 k8s_role=node
+192.168.2.60 k8s_role=master1 ha_priority=150 set_ha_type=1
+192.168.2.65 k8s_role=master2 ha_priority=100 set_ha_type=1
+192.168.2.67 k8s_role=master3 ha_priority=50 set_ha_type=1
+192.168.0.205 k8s_role=node
+192.168.0.206 k8s_role=node
+192.168.0.207 k8s_role=node
 [k8s-server:vars]
 update_kernel=true
 #k8s的VIP地址，部署前需要知道自己的VIP地址，若是单机部署，则写master的IP地址
-k8s_api_addr=$vip
+k8s_api_addr=192.168.2.60
 #单机部署时apiserver的端口是6443，高可用部署时的apiserver端口是8443，千万要修改！！！
 k8s_apiserver_port=8443
 #calico网段地址，注意不要与集群内网地址段冲突，这个地方一定要注意不要和集群内网地址段冲突，否则一定要修改！！！
@@ -64,66 +64,66 @@ calico_subnet=172.17.0.0/16
 #该部分是做什么的？是不是可以去掉~~~~~~~~~~~~~~~~~~~~~~~~`
 #k8s的node节点扩容,需要填写k8s的master的IP地址，对应的expand_role应设置为master，剩下的地址是要扩容的node节点的IP地址，对应的expand_role都应设置为node
 [expand-k8s-node]
-$k8s-master01 expand_role=master
+192.168.2.60 expand_role=master
 192.168.0.229 expand_role=node
 192.168.0.230 expand_role=node
 
 #nfs服务器的地址，只修改IP地址，日志存储（自建的）,指定这个的原则是什么？~~~~~~~~~~~~~~~
 [nfs-server]
-$harbor-server
+192.168.2.66
 
 ################################################分割线##################################################################
 #以下部分，关于xxxxx_server_host是设置的内部 DNS 解析，如果不修改则使用公司的域名，例如：mongo1.yunshicloud.com，如果使用的是已有的，
 #则需要更改为现有的地址，例如：mongo1.xjmty.com
 
-#私有镜像仓库，需要设置真正的域名,$domain是指定的使用一级域名~~~~~~~~~~~~
+#私有镜像仓库，需要设置真正的域名,wms.com是指定的使用一级域名~~~~~~~~~~~~
 [harbor-server]
-$harbor-server harbor_server_host=harbor.$domain
+192.168.2.66 harbor_server_host=harbor.wms.com
 
 #MySQL单机方式安装
 [mysql-server]
-$database02 mysql_server_host=mysql.yunshicloud.com
+192.168.2.62 mysql_server_host=mysql.yunshicloud.com
 
 #mongo服务器集群地址
 [mongo-server]
-$database01 mongo_server_host=mongo1.yunshicloud.com mongo_role=master
-$database02 mongo_server_host=mongo2.yunshicloud.com mongo_role=node
-$database03 mongo_server_host=mongo3.yunshicloud.com mongo_role=node
+192.168.2.61 mongo_server_host=mongo1.yunshicloud.com mongo_role=master
+192.168.2.62 mongo_server_host=mongo2.yunshicloud.com mongo_role=node
+192.168.2.63 mongo_server_host=mongo3.yunshicloud.com mongo_role=node
 
 #为了节省资源，把es和mongo安装到一个集群中；~~~~~~~~~~~
 #es集群地址
 [elasticsearch-server]
-$database01 es_server_host=es1.yunshicloud.com es_node_name=node-1 es_node_role=master install_plugin=true
-$database02 es_server_host=es2.yunshicloud.com es_node_name=node-2 es_node_role=slave
-$database03 es_server_host=es3.yunshicloud.com es_node_name=node-3 es_node_role=slave
+192.168.2.61 es_server_host=es1.yunshicloud.com es_node_name=node-1 es_node_role=master install_plugin=true
+192.168.2.62 es_server_host=es2.yunshicloud.com es_node_name=node-2 es_node_role=slave
+192.168.2.63 es_server_host=es3.yunshicloud.com es_node_name=node-3 es_node_role=slave
 
 #为了节省资源，把redis和mongo安装到一个集群中；~~~~~~~~~~~
 #redis集群
 [redis-server]
-$database01 redis_server_host=redis1.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_role=true redis_simple_role=false
-$database02 redis_server_host=redis2.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=true
-$database03 redis_server_host=redis3.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=false
+192.168.2.61 redis_server_host=redis1.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_role=true redis_simple_role=false
+192.168.2.62 redis_server_host=redis2.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=true
+192.168.2.63 redis_server_host=redis3.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=false
 
 #kafka集群地址，zookeeper_myid, broker_id 默认不用修改
 [kafka-server]
-$kafka01 kafka_server_host=kafka1.yunshicloud.com zookeeper_myid=1 broker_id=1
-$kafka02 kafka_server_host=kafka2.yunshicloud.com zookeeper_myid=2 broker_id=2
-$kafka03 kafka_server_host=kafka3.yunshicloud.com zookeeper_myid=3 broker_id=3
+192.168.2.61 kafka_server_host=kafka1.yunshicloud.com zookeeper_myid=1 broker_id=1
+192.168.2.62 kafka_server_host=kafka2.yunshicloud.com zookeeper_myid=2 broker_id=2
+192.168.2.63 kafka_server_host=kafka3.yunshicloud.com zookeeper_myid=3 broker_id=3
 
 #为了节省资源，把rabbitmq和kafka安装到一个集群中；~~~~~~~~~~~
 #rabbitmq集群
 [rabbitmq-server]
-$kafka01 mq_server_host=rabbitmq1.yunshicloud.com rabbitmq_role=master
-$kafka02 mq_server_host=rabbitmq2.yunshicloud.com rabbitmq_role=node
-$kafka03 mq_server_host=rabbitmq3.yunshicloud.com rabbitmq_role=node
+192.168.2.61 mq_server_host=rabbitmq1.yunshicloud.com rabbitmq_role=master
+192.168.2.62 mq_server_host=rabbitmq2.yunshicloud.com rabbitmq_role=node
+192.168.2.63 mq_server_host=rabbitmq3.yunshicloud.com rabbitmq_role=node
 
 #nginx服务部署
 #两台nginx，一台用作所有服务的反向代理，另一台作为直播的出口，反向代理这台机器中deploy_role设置成master
 #create_db=true 只在一台机器上设置，不要设置多台！
 #k8s_client=true 只在一台机器上设置，不要设置多台！，且只能在nginx的反代服务器上设置，如果有多台反代nginx，则只设置一台即可
 [deploy-server]
-$web-server deploy_role=master create_db=true k8s_client=true
-$live-server deploy_role=live
+192.168.2.64 deploy_role=master create_db=true k8s_client=true
+192.168.0.200 deploy_role=live
 
 #下面设置的为全局变量
 [all:vars]
@@ -139,75 +139,75 @@ cloud_service_elasticsearch=False
 cloud_service_redis=False
 cloud_service_rabbitmq=False
 #DNS服务器的地址，注意：最好是自建DNS，不要使用现有的DNS服务器
-dns_server_addr=$web-server
+dns_server_addr=192.168.2.64
 #以下是项目中用到的所有域名，需要在内部DNS服务器中做一下解析，如果非得使用现有的DNS服务器，那么就有99.9999%的可能会部署失败！
 #nacos相关
-nacos_domain=nacos.$domain
+nacos_domain=nacos.wms.com
 #媒体云主域名
-cloud_domain=cloud.$domain
+cloud_domain=cloud.wms.com
 #运营控制台
-operation_domain=operation.$domain
+operation_domain=operation.wms.com
 
 # 炫云相关
 dazzle_service=True
 # 主域名
-dazzle_domain=dazzle.$domain
+dazzle_domain=dazzle.wms.com
 # 消息长连接
-# 炫云长连接(cim.$domain)请求端口
+# 炫云长连接(cim.wms.com)请求端口
 cim1_listen_port=30200
 cim2_listen_port=30201
 cim3_listen_port=30202
 
 #
 #flink主域名
-flink_domain=flink.$domain
+flink_domain=flink.wms.com
 #分发主域名
-cd_domain=cd.$domain
-cdapi_domain=cdapi.$domain
+cd_domain=cd.wms.com
+cdapi_domain=cdapi.wms.com
 #意见反馈主域名
-feedback_domain=feedback.$domain
+feedback_domain=feedback.wms.com
 #内容交换主域名
-exchange_domain=exchange.$domain
+exchange_domain=exchange.wms.com
 #统一资源管理
-resource_domain=resource.$domain
+resource_domain=resource.wms.com
 #大屏连线主域名
-map_domain=map.$domain
+map_domain=map.wms.com
 #用户管理主域名
-usermanage_domain=usermanage.$domain
+usermanage_domain=usermanage.wms.com
 #智能云媒资主域名
-assets_domain=assets.$domain
+assets_domain=assets.wms.com
 #vlog主域名
-vlog_domain=vlog.$domain
+vlog_domain=vlog.wms.com
 #底层能力的上层服务：拆条，导播，快编，收录等
-tmc_domain=tmc.$domain
+tmc_domain=tmc.wms.com
 #直播相关
-livein_domain=livein.$domain
-liveout_domain=liveout.$domain
+livein_domain=livein.wms.com
+liveout_domain=liveout.wms.com
 #云擎导播低频输出
-preview01_domain=preview01.$domain
-preview02_domain=preview02.$domain
-preview03_domain=preview03.$domain
-preview04_domain=preview04.$domain
+preview01_domain=preview01.wms.com
+preview02_domain=preview02.wms.com
+preview03_domain=preview03.wms.com
+preview04_domain=preview04.wms.com
 #拆条缓存服务
-huancun_domain=huancun.$domain
+huancun_domain=huancun.wms.com
 #收录缓存服务
-recordcache_domain=recordcache.$domain
+recordcache_domain=recordcache.wms.com
 #本地obs存储，或云厂商存储地址
-obs_domain=obs.$domain
+obs_domain=obs.wms.com
 #ts文件代理，如果使用对象存储配置obs_domain的地址
-liveoss_domain=liveobs.$domain
+liveoss_domain=liveobs.wms.com
 #敏感词地址
-mgc_domain=mgc.$domain
+mgc_domain=mgc.wms.com
 #xxl-job任务管理中心
-xxljob_domain=xxl-job.$domain
+xxljob_domain=xxl-job.wms.com
 #文件代理
-obscdn_domain=obs.$domain
+obscdn_domain=obs.wms.com
 
 #####################################NFS相关#####################
 #NFS服务器的地址，日志存储（一般是自建nfs）
-nfs_log_server_addr=$nfs
+nfs_log_server_addr=192.168.2.66
 #业务数据存储（一般客户提供存储）
-nfs_data_server_addr=$nfs
+nfs_data_server_addr=192.168.2.66
 #pv的容量，单位 Ki | Mi | Gi | Ti | Pi | Ei
 #日志的容量
 nfs_log_storage_size=500Gi
@@ -222,9 +222,9 @@ nfs_ip_range=192.168.0.0/16
 nfs_data_path=/data/k8sStorage
 ###########################################私有仓库相关#####################################
 #本地镜像服务器的地址
-harbor_real_addr=$harbor-server
+harbor_real_addr=192.168.2.66
 #本地镜像服务的域名，不需要指定端口，不需要指定端口，不需要指定端口
-harbor_domain_name=harbor.$domain
+harbor_domain_name=harbor.wms.com
 #镜像服务器的端口，必须是非80端口，必须是非80端口，必须是非80端口，后面jenkins自动创建任务的时候也需要更改，可以先提前记住
 harbor_server_port=19999
 #harbor的密码，必须要修改，否则安全扫描会报漏洞
@@ -253,7 +253,7 @@ nginx_ssl_key=server.key
 http_proxy=http
 #在master上给底层服务创建一个node标签，并指定该node的IP地址
 which_k8snode_set_dclabel=k8s-node01
-dc_node_addr=$k8s-node01
+dc_node_addr=192.168.0.205
 #如果是本地存储使用默认值，如果是对象存储需要修改
 #对象存储AK,如果是本地存储使用默认值，如果是对象存储需要修改
 obs_mz_appkey=MEIZI_YUNSHI
@@ -270,7 +270,7 @@ obs_appsecret=onair
 #对象存储endpoint
 obs_endpoint=onair
 #如果是对象存储，配置存储桶地址，如果是本地存储，配置文件代理地址
-obs_bucket_domain=obs.$domain
+obs_bucket_domain=obs.wms.com
 #直播API，true: 上传本地；false：上传obs
 download_to_nas=true
 #要部署哪些服务（True: 部署, False: 不部署）
@@ -374,10 +374,10 @@ ws_proxy=ws
 #导播播放地址端口，如果是http，值为：80，如果使用https，值为：443
 switchboard_port=80
 #监控报警邮箱
-alert_email=$alert_email
+alert_email=wms@cdvcloud.com
 #秒变回看环境变量，默认为县融环境，依据不同的项目修改，如华通云修改为华通云
 env_weChat=县融环境
 #监控报警项目环境，比如济南电台县融媒，新华网县融媒
-alert_env=$company
+alert_env=阳光云视科技有限公司
 #只部署媒资服务，True为开启，False为关闭
 mam_simple=False
