@@ -1,0 +1,383 @@
+#这里是设置所有主机的地方，[]括号内的为组名，组名不得重复
+#用到多少主机就写多少，host_name用来设置主机名，必须要设置，不要重复
+#部署单机版的k8s集群时记得把多余的master删掉或注释掉
+[all-server]
+$k8s-master01  host_name=k8s-master01
+$k8s-master02  host_name=k8s-master02
+$k8s-master03  host_name=k8s-master03
+$k8s-node01    host_name=k8s-node01
+$k8s-node02    host_name=k8s-node02
+$k8s-node03    host_name=k8s-node03
+$database01    host_name=database01
+$database02    host_name=database02
+$database03    host_name=database03
+$harbor-server host_name=harbor-server
+$web-server    host_name=web-server
+$live-server   host_name=live-server
+
+#这部分需要说明是谁要做什么操作？~~~~~~~~~~~
+#磁盘分区、格式化、挂载等操作，默认挂载到/data目录，如果以挂载好，请忽略此配置项
+#如果挂载的目录位置，请手动卸载所有分区，重新进行挂载
+[all-server:vars]
+
+#需要查看 fdisk -l,确定誰要进行挂载？~~~~~~~~~~~~
+# 数据分区对应的分区名称，根据实际情况填写(eg: /dev/sda3  /dev/sdb1  /dev/vdb1)
+# 注意是数据分区，非系统分区！ 非系统分区！ 非系统分区！
+device_name=/dev/sda3
+
+# 挂载位置，无特殊要求不用修改
+mounted_position=/data
+
+# 设置vg、lv名称，无特殊要求不用修改，什么是特殊要求需要说明一下~~~~~~~~~~~
+vg_name=data-vg
+lv_name=data-lv
+
+#DNS部署
+[dns-server]
+$web-server
+
+#ansible的安装也是在web-server中进行；~~~~~~~~~~~
+[ansible-server]
+$web-server
+
+#k8s部署
+#注意set_ha_type的值
+#单机版部署时，需要把多余的master给注释掉，然后把set_ha_type设置为: 0 (不区分私有化和公有云，部署方式都一样)
+#私有化部署高可用的k8s时，set_ha_type设置为: 1
+#公有云部署高可用的k8s时，set_ha_type设置为: 2
+[k8s-server]
+$k8s-master01 k8s_role=master1 ha_priority=150 set_ha_type=1
+$k8s-master02 k8s_role=master2 ha_priority=100 set_ha_type=1
+$k8s-master03 k8s_role=master3 ha_priority=50 set_ha_type=1
+$k8s-node01 k8s_role=node
+$k8s-node02 k8s_role=node
+$k8s-node03 k8s_role=node
+[k8s-server:vars]
+update_kernel=true
+#k8s的VIP地址，部署前需要知道自己的VIP地址，若是单机部署，则写master的IP地址
+k8s_api_addr=$vip
+#单机部署时apiserver的端口是6443，高可用部署时的apiserver端口是8443，千万要修改！！！
+k8s_apiserver_port=8443
+#calico网段地址，注意不要与集群内网地址段冲突，这个地方一定要注意不要和集群内网地址段冲突，否则一定要修改！！！
+calico_subnet=172.17.0.0/16
+
+#该部分是做什么的？是不是可以去掉~~~~~~~~~~~~~~~~~~~~~~~~`
+#k8s的node节点扩容,需要填写k8s的master的IP地址，对应的expand_role应设置为master，剩下的地址是要扩容的node节点的IP地址，对应的expand_role都应设置为node
+[expand-k8s-node]
+$k8s-master01 expand_role=master
+192.168.0.229 expand_role=node
+192.168.0.230 expand_role=node
+
+#nfs服务器的地址，只修改IP地址，日志存储（自建的）,指定这个的原则是什么？~~~~~~~~~~~~~~~
+[nfs-server]
+$harbor-server
+
+################################################分割线##################################################################
+#以下部分，关于xxxxx_server_host是设置的内部 DNS 解析，如果不修改则使用公司的域名，例如：mongo1.yunshicloud.com，如果使用的是已有的，
+#则需要更改为现有的地址，例如：mongo1.xjmty.com
+
+#私有镜像仓库，需要设置真正的域名,$domain是指定的使用一级域名~~~~~~~~~~~~
+[harbor-server]
+$harbor-server harbor_server_host=harbor.$domain
+
+#MySQL单机方式安装
+[mysql-server]
+192.168.2.61 mysql_server_host=mysql.yunshicloud.com
+
+#mongo服务器集群地址
+[mongo-server]
+$database01 mongo_server_host=mongo1.yunshicloud.com mongo_role=master
+$database02 mongo_server_host=mongo2.yunshicloud.com mongo_role=node
+$database03 mongo_server_host=mongo3.yunshicloud.com mongo_role=node
+
+#为了节省资源，把es和mongo安装到一个集群中；~~~~~~~~~~~
+#es集群地址
+[elasticsearch-server]
+$database01 es_server_host=es1.yunshicloud.com es_node_name=node-1 es_node_role=master install_plugin=true
+$database02 es_server_host=es2.yunshicloud.com es_node_name=node-2 es_node_role=slave
+$database03 es_server_host=es3.yunshicloud.com es_node_name=node-3 es_node_role=slave
+
+#为了节省资源，把redis和mongo安装到一个集群中；~~~~~~~~~~~
+#redis集群
+[redis-server]
+$database01 redis_server_host=redis1.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_role=true redis_simple_role=false
+$database02 redis_server_host=redis2.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=true
+$database03 redis_server_host=redis3.yunshicloud.com redis_port1=6000 redis_port2=6001 redis_port3=7000 redis_port4=7001 redis_simple_role=false
+
+#kafka集群地址，zookeeper_myid, broker_id 默认不用修改
+[kafka-server]
+$kafka01 kafka_server_host=kafka1.yunshicloud.com zookeeper_myid=1 broker_id=1
+$kafka02 kafka_server_host=kafka2.yunshicloud.com zookeeper_myid=2 broker_id=2
+$kafka03 kafka_server_host=kafka3.yunshicloud.com zookeeper_myid=3 broker_id=3
+
+#为了节省资源，把rabbitmq和kafka安装到一个集群中；~~~~~~~~~~~
+#rabbitmq集群
+[rabbitmq-server]
+$kafka01 mq_server_host=rabbitmq1.yunshicloud.com rabbitmq_role=master
+$kafka02 mq_server_host=rabbitmq2.yunshicloud.com rabbitmq_role=node
+$kafka03 mq_server_host=rabbitmq3.yunshicloud.com rabbitmq_role=node
+
+#nginx服务部署
+#两台nginx，一台用作所有服务的反向代理，另一台作为直播的出口，反向代理这台机器中deploy_role设置成master
+#create_db=true 只在一台机器上设置，不要设置多台！
+#k8s_client=true 只在一台机器上设置，不要设置多台！，且只能在nginx的反代服务器上设置，如果有多台反代nginx，则只设置一台即可
+[deploy-server]
+$web-server deploy_role=master create_db=true k8s_client=true
+$live-server deploy_role=live
+
+#下面设置的为全局变量
+[all:vars]
+ansible_ssh_port=22
+ansible_ssh_user=root
+ansible_ssh_pass=virtualhost
+#########################################DNS相关####################################
+#这里是设置在进行DNS解析时，判断是否为公有云的云服务，可选：False（表示不是公有云服务）True（公有云云服务）
+cloud_service_mysql=False
+cloud_service_mongo=False
+cloud_service_kafka=False
+cloud_service_elasticsearch=False
+cloud_service_redis=False
+cloud_service_rabbitmq=False
+#DNS服务器的地址，注意：最好是自建DNS，不要使用现有的DNS服务器
+dns_server_addr=$web-server
+#以下是项目中用到的所有域名，需要在内部DNS服务器中做一下解析，如果非得使用现有的DNS服务器，那么就有99.9999%的可能会部署失败！
+#nacos相关
+nacos_domain=nacos.$domain
+#媒体云主域名
+cloud_domain=cloud.$domain
+#运营控制台
+operation_domain=operation.$domain
+
+# 炫云相关
+dazzle_service=True
+# 主域名
+dazzle_domain=dazzle.$domain
+# 消息长连接
+# 炫云长连接(cim.$domain)请求端口
+cim1_listen_port=30200
+cim2_listen_port=30201
+cim3_listen_port=30202
+
+#
+#flink主域名
+flink_domain=flink.$domain
+#分发主域名
+cd_domain=cd.$domain
+cdapi_domain=cdapi.$domain
+#意见反馈主域名
+feedback_domain=feedback.$domain
+#内容交换主域名
+exchange_domain=exchange.$domain
+#统一资源管理
+resource_domain=resource.$domain
+#大屏连线主域名
+map_domain=map.$domain
+#用户管理主域名
+usermanage_domain=usermanage.$domain
+#智能云媒资主域名
+assets_domain=assets.$domain
+#vlog主域名
+vlog_domain=vlog.$domain
+#底层能力的上层服务：拆条，导播，快编，收录等
+tmc_domain=tmc.$domain
+#直播相关
+livein_domain=livein.$domain
+liveout_domain=liveout.$domain
+#云擎导播低频输出
+preview01_domain=preview01.$domain
+preview02_domain=preview02.$domain
+preview03_domain=preview03.$domain
+preview04_domain=preview04.$domain
+#拆条缓存服务
+huancun_domain=huancun.$domain
+#收录缓存服务
+recordcache_domain=recordcache.$domain
+#本地obs存储，或云厂商存储地址
+obs_domain=obs.$domain
+#ts文件代理，如果使用对象存储配置obs_domain的地址
+liveoss_domain=liveobs.$domain
+#敏感词地址
+mgc_domain=mgc.$domain
+#xxl-job任务管理中心
+xxljob_domain=xxl-job.$domain
+#文件代理
+obscdn_domain=obs.$domain
+
+#####################################NFS相关#####################
+#NFS服务器的地址，日志存储（一般是自建nfs）
+nfs_log_server_addr=$nfs
+#业务数据存储（一般客户提供存储）
+nfs_data_server_addr=$nfs
+#pv的容量，单位 Ki | Mi | Gi | Ti | Pi | Ei
+#日志的容量
+nfs_log_storage_size=500Gi
+#业务数据的容量
+nfs_data_storage_size=500Gi
+#nfs的挂载地址,根据实际路径修改，日志存储路径
+nfs_log_path=/data/k8sStorage
+#下面这个地址是什么规则？~~~~~~~~~~~~~~~~~~~~~
+#日志存储允许连接nfs客户端网段
+nfs_ip_range=192.168.0.0/16
+#业务数据存储路径
+nfs_data_path=/data/k8sStorage
+###########################################私有仓库相关#####################################
+#本地镜像服务器的地址
+harbor_real_addr=$harbor-server
+#本地镜像服务的域名，不需要指定端口，不需要指定端口，不需要指定端口
+harbor_domain_name=harbor.$domain
+#镜像服务器的端口，必须是非80端口，必须是非80端口，必须是非80端口，后面jenkins自动创建任务的时候也需要更改，可以先提前记住
+harbor_server_port=19999
+#harbor的密码，必须要修改，否则安全扫描会报漏洞
+harbor_server_passwd=Harbor@12345
+#####################################部署反代和k8s客户端以及建库建表初始化等相关#################################
+#nginx的监听端口，默认为80，不能修改
+nginx_listen_port=80
+#nginx的监听端口，默认为443，如果项目需要可以调整
+nginx_ssl_port=443
+
+#应该是所有的外部服务都走https,下面有点乱~~~~~~~~~~
+#是否启用ssl，启用为true，不启用为false，端口默认为443，不可更改
+#该配置项是用来在nginx的配置文件配置443的server {.....}的，分以下几种场景
+#（1）没有SLB，但需要配置SSL证书，则需要设置True
+#（2）没有SLB，不需要配置SSL证书，则设置为False
+#（3）有SLB，在SLB上指定HTTPS和SSL证书，则需要设置为False，否则报错重定向次数过多
+#（4）有SLB，没有在SLB上指定HTTPS和SSL证书，则需要设置为False
+ssl_status=False
+#ssl证书名，只设置名称，需要把你的证书上传到执行脚本中的setup.yaml同级目录下
+#nginx中的ssl_certificate对应的是nginx_ssl_crt
+#nginx中的ssl_certificate_key对应的是nginx_ssl_key
+#如果分不清crt和key可以参考上面的对应关系，具体可百度、谷歌！
+nginx_ssl_crt=server.crt
+nginx_ssl_key=server.key
+#使用什么协议，指的是nacos里的配置项，一般项目上都会是https，如果是公司内网测试，可以设置为http
+http_proxy=http
+#在master上给底层服务创建一个node标签，并指定该node的IP地址
+which_k8snode_set_dclabel=k8s-node01
+dc_node_addr=$k8s-node01
+#如果是本地存储使用默认值，如果是对象存储需要修改
+#对象存储AK,如果是本地存储使用默认值，如果是对象存储需要修改
+obs_mz_appkey=MEIZI_YUNSHI
+#对象存储AK,如果是本地存储使用默认值，如果是对象存储需要修改
+obs_mty_appkey=QMTNRK_YUNSHI
+#对象存储AK,如果是本地存储使用默认值，如果是对象存储需要修改
+obs_vlog_appkey=VLOG_YUNSHI
+#对象存储bucket_name
+obs_bucket=onair
+#对象存储AK
+obs_appkey=onair
+#对象存储SK
+obs_appsecret=onair
+#对象存储endpoint
+obs_endpoint=onair
+#如果是对象存储，配置存储桶地址，如果是本地存储，配置文件代理地址
+obs_bucket_domain=obs.$domain
+#直播API，true: 上传本地；false：上传obs
+download_to_nas=true
+#要部署哪些服务（True: 部署, False: 不部署）
+#统一资源管理
+resource_service=True
+#媒体云
+mty_service=True
+#用户管理
+usermanage_service=True
+#vlog
+vlog_service=True
+#内容交换
+exchange_service=True
+#媒资
+assets_service=True
+#下面两项为默认值，不需要修改
+upload_service=False
+operation_service=False
+#分发
+cloud_push_service=True
+#工具管理中心
+tmc_service=True
+#敏感词
+mgc_service=True
+#快编
+vedit_service=True
+#拆条
+livesplit_service=True
+#导播
+switchboard_service=True
+#收录
+liverecord_service=True
+#截图
+screenshot_service=True
+#转码
+transcode_service=True
+#直播
+live_service=True
+#obs存储，nfs网络共享存储
+obs_service=True
+#图片水印
+image_service=True
+#工具集
+gereral_service=True
+#xxljob定时任务
+xxljob_service=True
+#prometheus监控
+prometheus_service=True
+#flink服务
+flink_service=True
+##########################################################################################################
+#下面的内容可以不修改，可以按照默认的一些值来安装，如果使用的公有云的云服务，那么就需要修改下面的一些值。
+##########################################数据库相关########################################################
+#######################mongo#########################
+mongo_port=3717
+mongo_user=onair
+mongo_admin_user=admin
+mongo_passwd="Onair#123"
+mongo_admin_passwd=cdvcloudadmin
+#这里如果是公有云的云服务，则需要写master的地址，但只是用来建库授权使用，nacos还得需要修改
+mongo_host=mongo1.yunshicloud.com
+######################mysql#########################
+#mysql数据库账号
+mysql_user=onair
+#mysql数据库密码
+mysql_passwd="6#7pBqducDF4Svi3"
+#mysql数据库管理员密码
+mysql_root_user=root
+mysql_root_passwd="6#7pBqducDF4Svi3"
+#mysql数据库端口
+mysql_port=3306
+#如果是公有云的云服务，请进行替换
+mysql_host=mysql.yunshicloud.com
+#####################redis相关#######################
+redis_passwd="6#7pBqducDF4Svi3"
+########################rabbitmq######################
+mq_user=onair
+mq_tags=onair
+mq_passwd="6#7pBqducDF4Svi3"
+#rabbitmq的主机名，写的是rabbitmq的master的主机名
+rabbitmq_hostname=database01
+############################kafka相关####################
+kafka_server_port=9092
+######################其他###################
+#用户（存储）对接方式 华为网关（HUAWEIHEADER），阿里（ALIHEADER），本地存储（ONAIRHEADER），TOKEN（TOKEN）
+storage_mode=ONAIRHEADER
+#文件存储类型 0:本地存储 1:对象存储
+storetype=0
+#文件存储模式，默认值 0:对象存储  1:本地存储
+upload_model=1
+# 是否迁移文件，当为本地模式时，值为：true,对象存储时：false
+transfer_model=true
+# 与m3u8地址配合访问ts文件，本地模式：{dateStr}/{streamName}/{fileName}.{fileFormat}，对象存储模式：{fileName}.{fileFormat}
+tfilename="{dateStr}/{streamName}/{fileName}.{fileFormat}"
+###################cim################
+cim_domain=cim.mawei.com
+# 如果是http，值为：80，如果是https，值为：8443
+cim_port=80
+#如果使用https,值为：wss，使用http，值为：ws
+ws_proxy=ws
+#导播播放地址端口，如果是http，值为：80，如果使用https，值为：443
+switchboard_port=80
+#监控报警邮箱
+alert_email=$alert_email
+#秒变回看环境变量，默认为县融环境，依据不同的项目修改，如华通云修改为华通云
+env_weChat=县融环境
+#监控报警项目环境，比如济南电台县融媒，新华网县融媒
+alert_env=阳光电台县融媒
+#只部署媒资服务，True为开启，False为关闭
+mam_simple=False
