@@ -1,3 +1,4 @@
+##################################################################################################################
 #这里是设置所有主机的地方，[]括号内的为组名，组名不得重复
 #用到多少主机就写多少，host_name用来设置主机名，必须要设置，不要重复
 #部署单机版的k8s集群时记得把多余的master删掉或注释掉
@@ -15,7 +16,8 @@ $harbor-server host_name=harbor-server
 $web-server    host_name=web-server
 $live-server   host_name=live-server
 
-#这部分需要说明是谁要做什么操作？~~~~~~~~~~~
+##################################################################################################################
+#这部设置系统的数据盘的设置（需要把这部分单独提出来，在此设置有问题！！）
 #磁盘分区、格式化、挂载等操作，默认挂载到/data目录，如果以挂载好，请忽略此配置项
 #如果挂载的目录位置，请手动卸载所有分区，重新进行挂载
 [all-server:vars]
@@ -28,6 +30,7 @@ device_name=/dev/sda3
 # 挂载位置，无特殊要求不用修改
 mounted_position=/data
 
+##################################################################################################################
 # 设置vg、lv名称，无特殊要求不用修改，什么是特殊要求需要说明一下~~~~~~~~~~~
 vg_name=data-vg
 lv_name=data-lv
@@ -40,8 +43,9 @@ $web-server
 [ansible-server]
 $web-server
 
+##################################################################################################################
 #k8s部署
-#注意set_ha_type的值
+#set_ha_type的设定规则:
 #单机版部署时，需要把多余的master给注释掉，然后把set_ha_type设置为: 0 (不区分私有化和公有云，部署方式都一样)
 #私有化部署高可用的k8s时，set_ha_type设置为: 1
 #公有云部署高可用的k8s时，set_ha_type设置为: 2
@@ -52,6 +56,7 @@ $k8s-master03 k8s_role=master3 ha_priority=50 set_ha_type=1
 $k8s-node01 k8s_role=node
 $k8s-node02 k8s_role=node
 $k8s-node03 k8s_role=node
+
 [k8s-server:vars]
 update_kernel=true
 #k8s的VIP地址，部署前需要知道自己的VIP地址，若是单机部署，则写master的IP地址
@@ -61,13 +66,15 @@ k8s_apiserver_port=8443
 #calico网段地址，注意不要与集群内网地址段冲突，这个地方一定要注意不要和集群内网地址段冲突，否则一定要修改！！！
 calico_subnet=172.17.0.0/16
 
-#该部分是做什么的？是不是可以去掉~~~~~~~~~~~~~~~~~~~~~~~~`
-#k8s的node节点扩容,需要填写k8s的master的IP地址，对应的expand_role应设置为master，剩下的地址是要扩容的node节点的IP地址，对应的expand_role都应设置为node
+##################################################################################################################
+#k8s的node节点扩容,需要填写k8s的master的IP地址，对应的expand_role应设置为master，剩下的地址是要扩容的node节点的IP地址，
+#对应的expand_role都应设置为node
 [expand-k8s-node]
 $k8s-master01 expand_role=master
 192.168.0.229 expand_role=node
 192.168.0.230 expand_role=node
 
+##################################################################################################################
 #nfs服务器的地址，只修改IP地址，日志存储（自建的）,指定这个的原则是什么？~~~~~~~~~~~~~~~
 [nfs-server]
 $harbor-server
@@ -117,6 +124,7 @@ $kafka01 mq_server_host=rabbitmq1.yunshicloud.com rabbitmq_role=master
 $kafka02 mq_server_host=rabbitmq2.yunshicloud.com rabbitmq_role=node
 $kafka03 mq_server_host=rabbitmq3.yunshicloud.com rabbitmq_role=node
 
+################################################分割线##################################################################
 #nginx服务部署
 #两台nginx，一台用作所有服务的反向代理，另一台作为直播的出口，反向代理这台机器中deploy_role设置成master
 #create_db=true 只在一台机器上设置，不要设置多台！
@@ -130,7 +138,8 @@ $live-server deploy_role=live
 ansible_ssh_port=22
 ansible_ssh_user=root
 ansible_ssh_pass=virtualhost
-#########################################DNS相关####################################
+
+################################################分割线##################################################################
 #这里是设置在进行DNS解析时，判断是否为公有云的云服务，可选：False（表示不是公有云服务）True（公有云云服务）
 cloud_service_mysql=False
 cloud_service_mongo=False
@@ -147,7 +156,6 @@ nacos_domain=nacos.$domain
 cloud_domain=cloud.$domain
 #运营控制台
 operation_domain=operation.$domain
-
 # 炫云相关
 dazzle_service=True
 # 主域名
@@ -157,8 +165,6 @@ dazzle_domain=dazzle.$domain
 cim1_listen_port=30200
 cim2_listen_port=30201
 cim3_listen_port=30202
-
-#
 #flink主域名
 flink_domain=flink.$domain
 #分发主域名
@@ -203,7 +209,7 @@ xxljob_domain=xxl-job.$domain
 #文件代理
 obscdn_domain=obs.$domain
 
-#####################################NFS相关#####################
+################################################分割线##################################################################
 #NFS服务器的地址，日志存储（一般是自建nfs）
 nfs_log_server_addr=$nfs
 #业务数据存储（一般客户提供存储）
@@ -220,7 +226,9 @@ nfs_log_path=/data/k8sStorage
 nfs_ip_range=192.168.0.0/16
 #业务数据存储路径
 nfs_data_path=/data/k8sStorage
-###########################################私有仓库相关#####################################
+
+################################################分割线##################################################################
+#私有仓库相关
 #本地镜像服务器的地址
 harbor_real_addr=$harbor-server
 #本地镜像服务的域名，不需要指定端口，不需要指定端口，不需要指定端口
@@ -229,7 +237,9 @@ harbor_domain_name=harbor.$domain
 harbor_server_port=19999
 #harbor的密码，必须要修改，否则安全扫描会报漏洞
 harbor_server_passwd=Harbor@12345
-#####################################部署反代和k8s客户端以及建库建表初始化等相关#################################
+
+################################################分割线##################################################################
+#部署反代和k8s客户端以及建库建表初始化等相关
 #nginx的监听端口，默认为80，不能修改
 nginx_listen_port=80
 #nginx的监听端口，默认为443，如果项目需要可以调整
@@ -251,6 +261,8 @@ nginx_ssl_crt=server.crt
 nginx_ssl_key=server.key
 #使用什么协议，指的是nacos里的配置项，一般项目上都会是https，如果是公司内网测试，可以设置为http
 http_proxy=http
+
+################################################分割线##################################################################
 #在master上给底层服务创建一个node标签，并指定该node的IP地址
 which_k8snode_set_dclabel=k8s-node01
 dc_node_addr=$k8s-node01
@@ -321,10 +333,9 @@ xxljob_service=True
 prometheus_service=True
 #flink服务
 flink_service=True
-##########################################################################################################
+################################################分割线##################################################################
 #下面的内容可以不修改，可以按照默认的一些值来安装，如果使用的公有云的云服务，那么就需要修改下面的一些值。
-##########################################数据库相关########################################################
-#######################mongo#########################
+#mongo数据库的设置:
 mongo_port=3717
 mongo_user=onair
 mongo_admin_user=admin
@@ -332,7 +343,8 @@ mongo_passwd="Onair#123"
 mongo_admin_passwd=cdvcloudadmin
 #这里如果是公有云的云服务，则需要写master的地址，但只是用来建库授权使用，nacos还得需要修改
 mongo_host=mongo1.yunshicloud.com
-######################mysql#########################
+
+#mysql数据库的设置:
 #mysql数据库账号
 mysql_user=onair
 #mysql数据库密码
@@ -344,17 +356,23 @@ mysql_root_passwd="6#7pBqducDF4Svi3"
 mysql_port=3306
 #如果是公有云的云服务，请进行替换
 mysql_host=mysql.yunshicloud.com
-#####################redis相关#######################
+
+#redis的访问密码的设置:
 redis_passwd="6#7pBqducDF4Svi3"
-########################rabbitmq######################
+
+################################################分割线##################################################################
+#rabbitmq的相关的设置:
 mq_user=onair
 mq_tags=onair
 mq_passwd="6#7pBqducDF4Svi3"
 #rabbitmq的主机名，写的是rabbitmq的master的主机名
 rabbitmq_hostname=database01
-############################kafka相关####################
+
+################################################分割线##################################################################
+#kafka的访问端口设置:
 kafka_server_port=9092
-######################其他###################
+
+################################################分割线##################################################################
 #用户（存储）对接方式 华为网关（HUAWEIHEADER），阿里（ALIHEADER），本地存储（ONAIRHEADER），TOKEN（TOKEN）
 storage_mode=ONAIRHEADER
 #文件存储类型 0:本地存储 1:对象存储
@@ -365,12 +383,16 @@ upload_model=1
 transfer_model=true
 # 与m3u8地址配合访问ts文件，本地模式：{dateStr}/{streamName}/{fileName}.{fileFormat}，对象存储模式：{fileName}.{fileFormat}
 tfilename="{dateStr}/{streamName}/{fileName}.{fileFormat}"
-###################cim################
-cim_domain=cim.mawei.com
+
+################################################分割线##################################################################
+#炫云相关实时评论的设置:
+cim_domain=cim.$domain
 # 如果是http，值为：80，如果是https，值为：8443
 cim_port=80
 #如果使用https,值为：wss，使用http，值为：ws
 ws_proxy=ws
+
+################################################分割线##################################################################
 #导播播放地址端口，如果是http，值为：80，如果使用https，值为：443
 switchboard_port=80
 #监控报警邮箱
@@ -381,3 +403,5 @@ env_weChat=县融环境
 alert_env=$company
 #只部署媒资服务，True为开启，False为关闭
 mam_simple=False
+
+#EnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnD
